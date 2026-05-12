@@ -220,10 +220,13 @@ class MainWindow(ctk.CTk):
         self.app.timer.set_mode(mode, custom_min)
         if mode == TimerMode.COUNTDOWN_25:
             self._time_label.configure(text="25:00")
+            self._btn_stop.configure(text="⏹")
         elif mode == TimerMode.COUNTDOWN_CUSTOM:
             self._time_label.configure(text=fmt_time(custom_min * 60))
+            self._btn_stop.configure(text="⏹")
         else:
             self._time_label.configure(text="00:00")
+            self._btn_stop.configure(text="✓ 完成")
 
     def _open_history(self):
         HistoryPanel(self, self.app)
@@ -590,15 +593,28 @@ class SettingsDialog(ctk.CTkToplevel):
             id_row, textvariable=self._cal_id_var, width=180, placeholder_text="primary"
         ).grid(row=0, column=1, padx=(6, 0))
 
+        btn_row = ctk.CTkFrame(gcal_frame, fg_color="transparent")
+        btn_row.grid(row=4, column=0, padx=12, pady=(0, 10), sticky="w")
+
         ctk.CTkButton(
-            gcal_frame,
+            btn_row,
             text="连接账户（OAuth）",
             fg_color=ACCENT,
             hover_color=ACCENT_HOVER,
             height=28,
             font=ctk.CTkFont(size=12),
             command=self._connect_gcal,
-        ).grid(row=4, column=0, padx=12, pady=(0, 10), sticky="w")
+        ).grid(row=0, column=0, padx=(0, 8))
+
+        ctk.CTkButton(
+            btn_row,
+            text="发送测试事件",
+            fg_color="#2b2b3b",
+            hover_color="#3a3a4a",
+            height=28,
+            font=ctk.CTkFont(size=12),
+            command=self._send_test_event,
+        ).grid(row=0, column=1)
 
         # ── Save button ───────────────────────────────────────────────────────
         ctk.CTkButton(
@@ -639,6 +655,37 @@ class SettingsDialog(ctk.CTkToplevel):
                 self.after(0, lambda: messagebox.showerror("连接失败", str(e)))
 
         threading.Thread(target=do_auth, daemon=True).start()
+
+    def _send_test_event(self):
+        cal_id = self._cal_id_var.get().strip() or "primary"
+
+        def do_test():
+            try:
+                from calendar_sync import sync_session_to_gcal
+                from datetime import datetime, timedelta
+                now = datetime.now()
+                session = {
+                    "start_time": (now - timedelta(minutes=25)).isoformat(),
+                    "end_time": now.isoformat(),
+                    "planned_duration": 25 * 60,
+                    "actual_duration": 25 * 60,
+                    "mode": "25min",
+                    "note": "测试事件 — 番茄时钟连通性测试",
+                    "tags": ["测试"],
+                    "completed": True,
+                }
+                event_id = sync_session_to_gcal(session, cal_id)
+                self.after(0, lambda: messagebox.showinfo(
+                    "测试成功 ✅",
+                    f"已在 Google Calendar 创建测试事件！\n\n"
+                    f"日历：{cal_id}\n"
+                    f"时间：{now.strftime('%H:%M')} 往前 25 分钟\n"
+                    f"事件 ID：{event_id}"
+                ))
+            except Exception as e:
+                self.after(0, lambda: messagebox.showerror("测试失败 ❌", str(e)))
+
+        threading.Thread(target=do_test, daemon=True).start()
 
     def _save(self):
         # Custom duration

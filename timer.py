@@ -83,6 +83,17 @@ class PomodoroTimer:
         self._emit_state()
 
     def stop(self):
+        # Count-up: stopping is how the user "finishes" — save and sync
+        if (
+            self.mode == TimerMode.COUNTUP
+            and self.state in (TimerState.RUNNING, TimerState.PAUSED)
+            and self.elapsed > 0
+        ):
+            self._stop_event.set()
+            self._pause_event.set()
+            self._finish()
+            return
+
         self._stop_event.set()
         self._pause_event.set()
         self.state = TimerState.IDLE
