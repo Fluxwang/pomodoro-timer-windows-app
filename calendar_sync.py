@@ -80,6 +80,18 @@ def has_credentials() -> bool:
     return os.path.exists(CREDENTIALS_PATH)
 
 
+def has_gcal_token() -> bool:
+    return os.path.exists(TOKEN_PATH)
+
+
+def logout_gcal() -> bool:
+    """Remove the locally saved Google OAuth token."""
+    if not os.path.exists(TOKEN_PATH):
+        return False
+    os.remove(TOKEN_PATH)
+    return True
+
+
 def get_gcal_service():
     """Return an authenticated Google Calendar service, or raise."""
     from google.oauth2.credentials import Credentials
@@ -183,6 +195,14 @@ def format_gcal_error(exc: Exception) -> str:
 
 def has_outlook_token() -> bool:
     return os.path.exists(OUTLOOK_TOKEN_CACHE_PATH)
+
+
+def logout_outlook() -> bool:
+    """Remove the locally saved Outlook OAuth token cache."""
+    if not os.path.exists(OUTLOOK_TOKEN_CACHE_PATH):
+        return False
+    os.remove(OUTLOOK_TOKEN_CACHE_PATH)
+    return True
 
 
 def _load_outlook_cache():

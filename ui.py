@@ -559,15 +559,17 @@ class SettingsDialog(ctk.CTkToplevel):
             GCAL_SETUP_INSTRUCTIONS,
             OUTLOOK_SETUP_INSTRUCTIONS,
             has_credentials,
+            has_gcal_token,
             has_outlook_token,
         )
         self._gcal_instructions = GCAL_SETUP_INSTRUCTIONS
         self._outlook_instructions = OUTLOOK_SETUP_INSTRUCTIONS
 
-        status_text = "✅ credentials.json 已就绪" if has_credentials() else "❌ 未配置 credentials.json"
-        ctk.CTkLabel(
+        status_text = self._gcal_status_text(has_credentials(), has_gcal_token())
+        self._gcal_status_label = ctk.CTkLabel(
             gcal_frame, text=status_text, font=ctk.CTkFont(size=12)
-        ).grid(row=0, column=0, padx=12, pady=(10, 4), sticky="w")
+        )
+        self._gcal_status_label.grid(row=0, column=0, padx=12, pady=(10, 4), sticky="w")
 
         ctk.CTkButton(
             gcal_frame,
@@ -607,6 +609,7 @@ class SettingsDialog(ctk.CTkToplevel):
             text="连接账户（OAuth）",
             fg_color=ACCENT,
             hover_color=ACCENT_HOVER,
+            width=122,
             height=28,
             font=ctk.CTkFont(size=12),
             command=self._connect_gcal,
@@ -617,10 +620,22 @@ class SettingsDialog(ctk.CTkToplevel):
             text="发送测试事件",
             fg_color="#2b2b3b",
             hover_color="#3a3a4a",
+            width=104,
             height=28,
             font=ctk.CTkFont(size=12),
             command=self._send_test_event,
-        ).grid(row=0, column=1)
+        ).grid(row=0, column=1, padx=(0, 8))
+
+        ctk.CTkButton(
+            btn_row,
+            text="退出当前登录",
+            fg_color="#2b2b3b",
+            hover_color="#3a3a4a",
+            width=112,
+            height=28,
+            font=ctk.CTkFont(size=12),
+            command=self._logout_gcal,
+        ).grid(row=0, column=2)
 
         # ── Outlook Calendar ─────────────────────────────────────────────────
         self._section("Outlook Calendar", row=7)
@@ -629,10 +644,11 @@ class SettingsDialog(ctk.CTkToplevel):
         outlook_frame.grid(row=8, column=0, padx=24, pady=(0, 4), sticky="ew")
         outlook_frame.grid_columnconfigure(0, weight=1)
 
-        outlook_status = "✅ Outlook token 已就绪" if has_outlook_token() else "❌ 未连接 Outlook"
-        ctk.CTkLabel(
+        outlook_status = self._outlook_status_text(has_outlook_token())
+        self._outlook_status_label = ctk.CTkLabel(
             outlook_frame, text=outlook_status, font=ctk.CTkFont(size=12)
-        ).grid(row=0, column=0, padx=12, pady=(10, 4), sticky="w")
+        )
+        self._outlook_status_label.grid(row=0, column=0, padx=12, pady=(10, 4), sticky="w")
 
         ctk.CTkButton(
             outlook_frame,
@@ -678,6 +694,7 @@ class SettingsDialog(ctk.CTkToplevel):
             text="连接 Outlook",
             fg_color=ACCENT,
             hover_color=ACCENT_HOVER,
+            width=104,
             height=28,
             font=ctk.CTkFont(size=12),
             command=self._connect_outlook,
@@ -688,10 +705,22 @@ class SettingsDialog(ctk.CTkToplevel):
             text="发送测试事件",
             fg_color="#2b2b3b",
             hover_color="#3a3a4a",
+            width=104,
             height=28,
             font=ctk.CTkFont(size=12),
             command=self._send_outlook_test_event,
-        ).grid(row=0, column=1)
+        ).grid(row=0, column=1, padx=(0, 8))
+
+        ctk.CTkButton(
+            outlook_btn_row,
+            text="退出当前登录",
+            fg_color="#2b2b3b",
+            hover_color="#3a3a4a",
+            width=112,
+            height=28,
+            font=ctk.CTkFont(size=12),
+            command=self._logout_outlook,
+        ).grid(row=0, column=2)
 
         # ── Save button ───────────────────────────────────────────────────────
         ctk.CTkButton(
@@ -711,6 +740,28 @@ class SettingsDialog(ctk.CTkToplevel):
             font=ctk.CTkFont(size=13, weight="bold"),
             text_color="#aaaacc",
         ).grid(row=row, column=0, padx=24, pady=(12, 4), sticky="w")
+
+    def _gcal_status_text(self, has_creds: bool, has_token: bool) -> str:
+        creds = "✅ credentials.json 已就绪" if has_creds else "❌ 未配置 credentials.json"
+        account = "✅ Google 账户已连接" if has_token else "❌ 未连接 Google 账户"
+        return f"{creds}；{account}"
+
+    def _outlook_status_text(self, has_token: bool) -> str:
+        return "✅ Outlook 账户已连接" if has_token else "❌ 未连接 Outlook"
+
+    def _refresh_gcal_status(self):
+        from calendar_sync import has_credentials, has_gcal_token
+
+        self._gcal_status_label.configure(
+            text=self._gcal_status_text(has_credentials(), has_gcal_token())
+        )
+
+    def _refresh_outlook_status(self):
+        from calendar_sync import has_outlook_token
+
+        self._outlook_status_label.configure(
+            text=self._outlook_status_text(has_outlook_token())
+        )
 
     def _show_gcal_instructions(self):
         win = ctk.CTkToplevel(self)
@@ -737,6 +788,7 @@ class SettingsDialog(ctk.CTkToplevel):
             try:
                 from calendar_sync import get_gcal_service
                 get_gcal_service()
+                self.after(0, self._refresh_gcal_status)
                 self.after(0, lambda: messagebox.showinfo("成功", "Google Calendar 账户连接成功！"))
             except Exception as e:
                 from calendar_sync import format_gcal_error
@@ -744,6 +796,26 @@ class SettingsDialog(ctk.CTkToplevel):
                 self.after(0, lambda: messagebox.showerror("连接失败", err))
 
         threading.Thread(target=do_auth, daemon=True).start()
+
+    def _logout_gcal(self):
+        if not messagebox.askyesno(
+            "退出 Google Calendar",
+            "确定要退出当前 Google Calendar 登录吗？\n\n"
+            "这会清除本机保存的授权 token，并关闭 Google Calendar 自动同步。",
+        ):
+            return
+
+        try:
+            from calendar_sync import logout_gcal
+
+            removed = logout_gcal()
+            self._gcal_var.set(False)
+            self.db.set_setting("gcal_enabled", "false")
+            self._refresh_gcal_status()
+            message = "已退出 Google Calendar 当前登录。" if removed else "当前没有已连接的 Google Calendar 账户。"
+            messagebox.showinfo("已退出", message)
+        except Exception as e:
+            messagebox.showerror("退出失败", str(e))
 
     def _send_test_event(self):
         cal_id = self._cal_id_var.get().strip() or "primary"
@@ -787,6 +859,7 @@ class SettingsDialog(ctk.CTkToplevel):
             try:
                 from calendar_sync import connect_outlook
                 connect_outlook(client_id)
+                self.after(0, self._refresh_outlook_status)
                 self.after(0, lambda: messagebox.showinfo("成功", "Outlook 账户连接成功！"))
             except Exception as e:
                 from calendar_sync import format_outlook_error
@@ -794,6 +867,26 @@ class SettingsDialog(ctk.CTkToplevel):
                 self.after(0, lambda: messagebox.showerror("连接失败", err))
 
         threading.Thread(target=do_auth, daemon=True).start()
+
+    def _logout_outlook(self):
+        if not messagebox.askyesno(
+            "退出 Outlook Calendar",
+            "确定要退出当前 Outlook Calendar 登录吗？\n\n"
+            "这会清除本机保存的授权 token，并关闭 Outlook Calendar 自动同步。",
+        ):
+            return
+
+        try:
+            from calendar_sync import logout_outlook
+
+            removed = logout_outlook()
+            self._outlook_var.set(False)
+            self.db.set_setting("outlook_enabled", "false")
+            self._refresh_outlook_status()
+            message = "已退出 Outlook Calendar 当前登录。" if removed else "当前没有已连接的 Outlook 账户。"
+            messagebox.showinfo("已退出", message)
+        except Exception as e:
+            messagebox.showerror("退出失败", str(e))
 
     def _send_outlook_test_event(self):
         client_id = self._outlook_client_id_var.get().strip()
