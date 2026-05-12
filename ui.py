@@ -44,6 +44,7 @@ def fmt_dt(iso: str | None) -> str:
 
 # ── Main Window ───────────────────────────────────────────────────────────────
 
+
 class MainWindow(ctk.CTk):
     def __init__(self, app):
         super().__init__()
@@ -226,7 +227,7 @@ class MainWindow(ctk.CTk):
             self._btn_stop.configure(text="⏹")
         else:
             self._time_label.configure(text="00:00")
-            self._btn_stop.configure(text="✓ 完成")
+            self._btn_stop.configure(text="✓")
 
     def _open_history(self):
         HistoryPanel(self, self.app)
@@ -246,6 +247,7 @@ class MainWindow(ctk.CTk):
 
 
 # ── Note Dialog ───────────────────────────────────────────────────────────────
+
 
 class NoteDialog(ctk.CTkToplevel):
     def __init__(self, parent, db):
@@ -283,7 +285,9 @@ class NoteDialog(ctk.CTkToplevel):
             font=ctk.CTkFont(size=13, weight="bold"),
         ).grid(row=2, column=0, padx=24, pady=(16, 6), sticky="w")
 
-        self._tag_frame = ctk.CTkScrollableFrame(self, height=100, fg_color="transparent")
+        self._tag_frame = ctk.CTkScrollableFrame(
+            self, height=100, fg_color="transparent"
+        )
         self._tag_frame.grid(row=3, column=0, padx=24, sticky="ew")
         self._reload_tags()
 
@@ -380,6 +384,7 @@ class NoteDialog(ctk.CTkToplevel):
 
 # ── History Panel ─────────────────────────────────────────────────────────────
 
+
 class HistoryPanel(ctk.CTkToplevel):
     def __init__(self, parent, app):
         super().__init__(parent)
@@ -399,9 +404,9 @@ class HistoryPanel(ctk.CTkToplevel):
         top.grid(row=0, column=0, padx=16, pady=(16, 8), sticky="ew")
         top.grid_columnconfigure(0, weight=1)
 
-        ctk.CTkLabel(top, text="历史记录", font=ctk.CTkFont(size=16, weight="bold")).grid(
-            row=0, column=0, sticky="w"
-        )
+        ctk.CTkLabel(
+            top, text="历史记录", font=ctk.CTkFont(size=16, weight="bold")
+        ).grid(row=0, column=0, sticky="w")
         ctk.CTkButton(
             top,
             text="导出 .ics",
@@ -495,14 +500,18 @@ class HistoryPanel(ctk.CTkToplevel):
             return
         try:
             from calendar_sync import export_ics_file
+
             sessions = self.app.db.get_all_sessions()
             export_ics_file(sessions, path)
-            messagebox.showinfo("导出成功", f"已导出 {len(sessions)} 条记录到：\n{path}")
+            messagebox.showinfo(
+                "导出成功", f"已导出 {len(sessions)} 条记录到：\n{path}"
+            )
         except Exception as e:
             messagebox.showerror("导出失败", str(e))
 
 
 # ── Settings Dialog ───────────────────────────────────────────────────────────
+
 
 class SettingsDialog(ctk.CTkToplevel):
     def __init__(self, parent, app):
@@ -518,9 +527,9 @@ class SettingsDialog(ctk.CTkToplevel):
     def _build(self):
         self.grid_columnconfigure(0, weight=1)
 
-        ctk.CTkLabel(
-            self, text="设置", font=ctk.CTkFont(size=18, weight="bold")
-        ).grid(row=0, column=0, padx=24, pady=(20, 16), sticky="w")
+        ctk.CTkLabel(self, text="设置", font=ctk.CTkFont(size=18, weight="bold")).grid(
+            row=0, column=0, padx=24, pady=(20, 16), sticky="w"
+        )
 
         # ── Custom duration ───────────────────────────────────────────────────
         self._section("自定义时长", row=1)
@@ -562,6 +571,7 @@ class SettingsDialog(ctk.CTkToplevel):
             has_gcal_token,
             has_outlook_token,
         )
+
         self._gcal_instructions = GCAL_SETUP_INSTRUCTIONS
         self._outlook_instructions = OUTLOOK_SETUP_INSTRUCTIONS
 
@@ -594,9 +604,9 @@ class SettingsDialog(ctk.CTkToplevel):
         self._cal_id_var = ctk.StringVar(value=cal_id)
         id_row = ctk.CTkFrame(gcal_frame, fg_color="transparent")
         id_row.grid(row=3, column=0, padx=12, pady=(0, 10), sticky="ew")
-        ctk.CTkLabel(id_row, text="日历 ID：", font=ctk.CTkFont(size=12), text_color=TEXT_DIM).grid(
-            row=0, column=0
-        )
+        ctk.CTkLabel(
+            id_row, text="日历 ID：", font=ctk.CTkFont(size=12), text_color=TEXT_DIM
+        ).grid(row=0, column=0)
         ctk.CTkEntry(
             id_row, textvariable=self._cal_id_var, width=180, placeholder_text="primary"
         ).grid(row=0, column=1, padx=(6, 0))
@@ -648,7 +658,9 @@ class SettingsDialog(ctk.CTkToplevel):
         self._outlook_status_label = ctk.CTkLabel(
             outlook_frame, text=outlook_status, font=ctk.CTkFont(size=12)
         )
-        self._outlook_status_label.grid(row=0, column=0, padx=12, pady=(10, 4), sticky="w")
+        self._outlook_status_label.grid(
+            row=0, column=0, padx=12, pady=(10, 4), sticky="w"
+        )
 
         ctk.CTkButton(
             outlook_frame,
@@ -742,7 +754,9 @@ class SettingsDialog(ctk.CTkToplevel):
         ).grid(row=row, column=0, padx=24, pady=(12, 4), sticky="w")
 
     def _gcal_status_text(self, has_creds: bool, has_token: bool) -> str:
-        creds = "✅ credentials.json 已就绪" if has_creds else "❌ 未配置 credentials.json"
+        creds = (
+            "✅ credentials.json 已就绪" if has_creds else "❌ 未配置 credentials.json"
+        )
         account = "✅ Google 账户已连接" if has_token else "❌ 未连接 Google 账户"
         return f"{creds}；{account}"
 
@@ -787,11 +801,18 @@ class SettingsDialog(ctk.CTkToplevel):
         def do_auth():
             try:
                 from calendar_sync import get_gcal_service
+
                 get_gcal_service()
                 self.after(0, self._refresh_gcal_status)
-                self.after(0, lambda: messagebox.showinfo("成功", "Google Calendar 账户连接成功！"))
+                self.after(
+                    0,
+                    lambda: messagebox.showinfo(
+                        "成功", "Google Calendar 账户连接成功！"
+                    ),
+                )
             except Exception as e:
                 from calendar_sync import format_gcal_error
+
                 err = format_gcal_error(e)
                 self.after(0, lambda: messagebox.showerror("连接失败", err))
 
@@ -812,7 +833,11 @@ class SettingsDialog(ctk.CTkToplevel):
             self._gcal_var.set(False)
             self.db.set_setting("gcal_enabled", "false")
             self._refresh_gcal_status()
-            message = "已退出 Google Calendar 当前登录。" if removed else "当前没有已连接的 Google Calendar 账户。"
+            message = (
+                "已退出 Google Calendar 当前登录。"
+                if removed
+                else "当前没有已连接的 Google Calendar 账户。"
+            )
             messagebox.showinfo("已退出", message)
         except Exception as e:
             messagebox.showerror("退出失败", str(e))
@@ -824,6 +849,7 @@ class SettingsDialog(ctk.CTkToplevel):
             try:
                 from calendar_sync import sync_session_to_gcal
                 from datetime import datetime, timedelta
+
                 now = datetime.now()
                 session = {
                     "start_time": (now - timedelta(minutes=25)).isoformat(),
@@ -836,15 +862,19 @@ class SettingsDialog(ctk.CTkToplevel):
                     "completed": True,
                 }
                 event_id = sync_session_to_gcal(session, cal_id)
-                self.after(0, lambda: messagebox.showinfo(
-                    "测试成功 ✅",
-                    f"已在 Google Calendar 创建测试事件！\n\n"
-                    f"日历：{cal_id}\n"
-                    f"时间：{now.strftime('%H:%M')} 往前 25 分钟\n"
-                    f"事件 ID：{event_id}"
-                ))
+                self.after(
+                    0,
+                    lambda: messagebox.showinfo(
+                        "测试成功 ✅",
+                        f"已在 Google Calendar 创建测试事件！\n\n"
+                        f"日历：{cal_id}\n"
+                        f"时间：{now.strftime('%H:%M')} 往前 25 分钟\n"
+                        f"事件 ID：{event_id}",
+                    ),
+                )
             except Exception as e:
                 from calendar_sync import format_gcal_error
+
                 err = format_gcal_error(e)
                 self.after(0, lambda: messagebox.showerror("测试失败 ❌", err))
 
@@ -858,11 +888,15 @@ class SettingsDialog(ctk.CTkToplevel):
         def do_auth():
             try:
                 from calendar_sync import connect_outlook
+
                 connect_outlook(client_id)
                 self.after(0, self._refresh_outlook_status)
-                self.after(0, lambda: messagebox.showinfo("成功", "Outlook 账户连接成功！"))
+                self.after(
+                    0, lambda: messagebox.showinfo("成功", "Outlook 账户连接成功！")
+                )
             except Exception as e:
                 from calendar_sync import format_outlook_error
+
                 err = format_outlook_error(e)
                 self.after(0, lambda: messagebox.showerror("连接失败", err))
 
@@ -883,7 +917,11 @@ class SettingsDialog(ctk.CTkToplevel):
             self._outlook_var.set(False)
             self.db.set_setting("outlook_enabled", "false")
             self._refresh_outlook_status()
-            message = "已退出 Outlook Calendar 当前登录。" if removed else "当前没有已连接的 Outlook 账户。"
+            message = (
+                "已退出 Outlook Calendar 当前登录。"
+                if removed
+                else "当前没有已连接的 Outlook 账户。"
+            )
             messagebox.showinfo("已退出", message)
         except Exception as e:
             messagebox.showerror("退出失败", str(e))
@@ -897,6 +935,7 @@ class SettingsDialog(ctk.CTkToplevel):
             try:
                 from calendar_sync import sync_session_to_outlook
                 from datetime import datetime, timedelta
+
                 now = datetime.now()
                 session = {
                     "start_time": (now - timedelta(minutes=25)).isoformat(),
@@ -909,14 +948,18 @@ class SettingsDialog(ctk.CTkToplevel):
                     "completed": True,
                 }
                 event_id = sync_session_to_outlook(session, client_id)
-                self.after(0, lambda: messagebox.showinfo(
-                    "测试成功 ✅",
-                    f"已在 Outlook Calendar 创建测试事件！\n\n"
-                    f"时间：{now.strftime('%H:%M')} 往前 25 分钟\n"
-                    f"事件 ID：{event_id}"
-                ))
+                self.after(
+                    0,
+                    lambda: messagebox.showinfo(
+                        "测试成功 ✅",
+                        f"已在 Outlook Calendar 创建测试事件！\n\n"
+                        f"时间：{now.strftime('%H:%M')} 往前 25 分钟\n"
+                        f"事件 ID：{event_id}",
+                    ),
+                )
             except Exception as e:
                 from calendar_sync import format_outlook_error
+
                 err = format_outlook_error(e)
                 self.after(0, lambda: messagebox.showerror("测试失败 ❌", err))
 
@@ -939,11 +982,15 @@ class SettingsDialog(ctk.CTkToplevel):
 
         # Google Calendar
         self.db.set_setting("gcal_enabled", str(self._gcal_var.get()).lower())
-        self.db.set_setting("gcal_calendar_id", self._cal_id_var.get().strip() or "primary")
+        self.db.set_setting(
+            "gcal_calendar_id", self._cal_id_var.get().strip() or "primary"
+        )
 
         # Outlook Calendar
         self.db.set_setting("outlook_enabled", str(self._outlook_var.get()).lower())
-        self.db.set_setting("outlook_client_id", self._outlook_client_id_var.get().strip())
+        self.db.set_setting(
+            "outlook_client_id", self._outlook_client_id_var.get().strip()
+        )
 
         self.destroy()
         messagebox.showinfo("已保存", "设置已保存。")
