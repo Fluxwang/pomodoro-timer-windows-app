@@ -1,7 +1,7 @@
 # -*- mode: python ; coding: utf-8 -*-
 # PyInstaller spec for 番茄时钟
 
-import sys
+from PyInstaller.utils.hooks import collect_data_files
 
 block_cipher = None
 
@@ -9,13 +9,7 @@ a = Analysis(
     ['main.py'],
     pathex=[],
     binaries=[],
-    datas=[
-        # customtkinter bundles its own assets
-        (
-            'customtkinter',
-            'customtkinter',
-        ),
-    ],
+    datas=collect_data_files('customtkinter'),
     hiddenimports=[
         # customtkinter
         'customtkinter',
