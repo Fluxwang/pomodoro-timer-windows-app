@@ -1,0 +1,25 @@
+# Virtual environment
+.venv/
+venv/
+env/
+
+# PyInstaller
+build/
+dist/
+*.spec.bak
+__pycache__/
+*.py[cod]
+
+# User data (SQLite, Google tokens)
+~/.pomodoro/
+*.db
+token.json
+credentials.json
+
+# VSCode
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
