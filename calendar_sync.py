@@ -1,12 +1,14 @@
 """Calendar integration: .ics export and optional Google Calendar API sync."""
 
 import os
+import socket
 from datetime import datetime, timezone
 from db import DATA_DIR
 
 CREDENTIALS_PATH = os.path.join(DATA_DIR, "credentials.json")
 TOKEN_PATH = os.path.join(DATA_DIR, "token.json")
 SCOPES = ["https://www.googleapis.com/auth/calendar.events"]
+GCAL_REQUEST_TIMEOUT = 20
 
 
 # ── .ics Export ───────────────────────────────────────────────────────────────
@@ -93,7 +95,17 @@ def get_gcal_service():
         with open(TOKEN_PATH, "w") as f:
             f.write(creds.to_json())
 
-    return build("calendar", "v3", credentials=creds)
+    try:
+        import httplib2
+        from google_auth_httplib2 import AuthorizedHttp
+
+        http = AuthorizedHttp(
+            creds,
+            http=httplib2.Http(timeout=GCAL_REQUEST_TIMEOUT),
+        )
+        return build("calendar", "v3", http=http, cache_discovery=False)
+    except ImportError:
+        return build("calendar", "v3", credentials=creds, cache_discovery=False)
 
 
 def sync_session_to_gcal(session: dict, calendar_id: str = "primary") -> str:
@@ -122,6 +134,43 @@ def sync_session_to_gcal(session: dict, calendar_id: str = "primary") -> str:
     }
     result = service.events().insert(calendarId=calendar_id, body=body).execute()
     return result.get("id", "")
+
+
+def format_gcal_error(exc: Exception) -> str:
+    """Return a user-facing Google Calendar error message."""
+    raw = str(exc) or exc.__class__.__name__
+    timeout_markers = (
+        "timed out",
+        "timeout",
+        "WinError 10060",
+        "Errno 110",
+        "Errno 10060",
+    )
+    connection_markers = (
+        "Failed to establish a new connection",
+        "NameResolutionError",
+        "getaddrinfo failed",
+        "Network is unreachable",
+        "Connection refused",
+    )
+
+    if isinstance(exc, (TimeoutError, socket.timeout)) or any(m in raw for m in timeout_markers):
+        return (
+            "连接 Google Calendar API 超时。\n\n"
+            "请确认当前网络可以访问 googleapis.com / accounts.google.com，"
+            "并检查系统代理、防火墙或 VPN 设置后重试。\n\n"
+            f"原始错误：{raw}"
+        )
+
+    if isinstance(exc, OSError) or any(m in raw for m in connection_markers):
+        return (
+            "无法连接到 Google Calendar API。\n\n"
+            "请检查网络连接、DNS、系统代理、防火墙或 VPN 设置。"
+            "如果你在受限网络环境中，需要先让系统代理对本应用生效。\n\n"
+            f"原始错误：{raw}"
+        )
+
+    return raw
 
 
 GCAL_SETUP_INSTRUCTIONS = """如何配置 Google Calendar 同步：

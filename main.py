@@ -94,10 +94,10 @@ class App:
 
     def _sync_gcal(self, session_data: dict, calendar_id: str):
         try:
-            from calendar_sync import sync_session_to_gcal
+            from calendar_sync import format_gcal_error, sync_session_to_gcal
             sync_session_to_gcal(session_data, calendar_id)
         except Exception as e:
-            print(f"[Google Calendar] 同步失败: {e}", file=sys.stderr)
+            print(f"[Google Calendar] 同步失败: {format_gcal_error(e)}", file=sys.stderr)
 
     # ── Public API (called from tray / UI) ───────────────────────────────────
 
