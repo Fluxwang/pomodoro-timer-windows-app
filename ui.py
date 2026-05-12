@@ -652,7 +652,8 @@ class SettingsDialog(ctk.CTkToplevel):
                 get_gcal_service()
                 self.after(0, lambda: messagebox.showinfo("成功", "Google Calendar 账户连接成功！"))
             except Exception as e:
-                self.after(0, lambda: messagebox.showerror("连接失败", str(e)))
+                err = str(e)
+                self.after(0, lambda: messagebox.showerror("连接失败", err))
 
         threading.Thread(target=do_auth, daemon=True).start()
 
@@ -683,7 +684,8 @@ class SettingsDialog(ctk.CTkToplevel):
                     f"事件 ID：{event_id}"
                 ))
             except Exception as e:
-                self.after(0, lambda: messagebox.showerror("测试失败 ❌", str(e)))
+                err = str(e)
+                self.after(0, lambda: messagebox.showerror("测试失败 ❌", err))
 
         threading.Thread(target=do_test, daemon=True).start()
 
