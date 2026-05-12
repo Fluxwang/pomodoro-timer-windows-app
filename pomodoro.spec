@@ -35,7 +35,11 @@ a = Analysis(
         'google.oauth2.credentials',
         'google_auth_oauthlib',
         'google_auth_oauthlib.flow',
+        'google_auth_httplib2',
         'google.auth.transport.requests',
+        # Microsoft Graph / Outlook API
+        'msal',
+        'requests',
         # stdlib
         'sqlite3',
         'json',

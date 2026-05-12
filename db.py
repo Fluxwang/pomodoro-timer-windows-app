@@ -45,7 +45,9 @@ class Database:
                 ('custom_duration', '25'),
                 ('startup_enabled', 'false'),
                 ('gcal_enabled',    'false'),
-                ('gcal_calendar_id','primary');
+                ('gcal_calendar_id','primary'),
+                ('outlook_enabled', 'false'),
+                ('outlook_client_id','');
         """)
         self.conn.commit()
 

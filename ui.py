@@ -510,7 +510,7 @@ class SettingsDialog(ctk.CTkToplevel):
         self.app = app
         self.db = app.db
         self.title("设置")
-        self.geometry("420x560")
+        self.geometry("460x720")
         self.resizable(False, False)
         self.grab_set()
         self._build()
@@ -555,8 +555,14 @@ class SettingsDialog(ctk.CTkToplevel):
         gcal_frame.grid(row=6, column=0, padx=24, pady=(0, 4), sticky="ew")
         gcal_frame.grid_columnconfigure(0, weight=1)
 
-        from calendar_sync import has_credentials, GCAL_SETUP_INSTRUCTIONS, DATA_DIR
+        from calendar_sync import (
+            GCAL_SETUP_INSTRUCTIONS,
+            OUTLOOK_SETUP_INSTRUCTIONS,
+            has_credentials,
+            has_outlook_token,
+        )
         self._gcal_instructions = GCAL_SETUP_INSTRUCTIONS
+        self._outlook_instructions = OUTLOOK_SETUP_INSTRUCTIONS
 
         status_text = "✅ credentials.json 已就绪" if has_credentials() else "❌ 未配置 credentials.json"
         ctk.CTkLabel(
@@ -616,6 +622,77 @@ class SettingsDialog(ctk.CTkToplevel):
             command=self._send_test_event,
         ).grid(row=0, column=1)
 
+        # ── Outlook Calendar ─────────────────────────────────────────────────
+        self._section("Outlook Calendar", row=7)
+
+        outlook_frame = ctk.CTkFrame(self, fg_color=BG_CARD, corner_radius=8)
+        outlook_frame.grid(row=8, column=0, padx=24, pady=(0, 4), sticky="ew")
+        outlook_frame.grid_columnconfigure(0, weight=1)
+
+        outlook_status = "✅ Outlook token 已就绪" if has_outlook_token() else "❌ 未连接 Outlook"
+        ctk.CTkLabel(
+            outlook_frame, text=outlook_status, font=ctk.CTkFont(size=12)
+        ).grid(row=0, column=0, padx=12, pady=(10, 4), sticky="w")
+
+        ctk.CTkButton(
+            outlook_frame,
+            text="查看配置说明",
+            fg_color="#2b2b3b",
+            hover_color="#3a3a4a",
+            height=28,
+            font=ctk.CTkFont(size=12),
+            command=self._show_outlook_instructions,
+        ).grid(row=1, column=0, padx=12, pady=(0, 6), sticky="w")
+
+        outlook_enabled = self.db.get_setting("outlook_enabled", "false") == "true"
+        self._outlook_var = ctk.BooleanVar(value=outlook_enabled)
+        ctk.CTkSwitch(
+            outlook_frame,
+            text="计时结束后自动同步到 Outlook Calendar",
+            variable=self._outlook_var,
+            font=ctk.CTkFont(size=12),
+        ).grid(row=2, column=0, padx=12, pady=(4, 4), sticky="w")
+
+        client_id = self.db.get_setting("outlook_client_id", "")
+        self._outlook_client_id_var = ctk.StringVar(value=client_id)
+        client_row = ctk.CTkFrame(outlook_frame, fg_color="transparent")
+        client_row.grid(row=3, column=0, padx=12, pady=(0, 10), sticky="ew")
+        ctk.CTkLabel(
+            client_row,
+            text="Client ID：",
+            font=ctk.CTkFont(size=12),
+            text_color=TEXT_DIM,
+        ).grid(row=0, column=0)
+        ctk.CTkEntry(
+            client_row,
+            textvariable=self._outlook_client_id_var,
+            width=260,
+            placeholder_text="Microsoft 应用程序(客户端) ID",
+        ).grid(row=0, column=1, padx=(6, 0))
+
+        outlook_btn_row = ctk.CTkFrame(outlook_frame, fg_color="transparent")
+        outlook_btn_row.grid(row=4, column=0, padx=12, pady=(0, 10), sticky="w")
+
+        ctk.CTkButton(
+            outlook_btn_row,
+            text="连接 Outlook",
+            fg_color=ACCENT,
+            hover_color=ACCENT_HOVER,
+            height=28,
+            font=ctk.CTkFont(size=12),
+            command=self._connect_outlook,
+        ).grid(row=0, column=0, padx=(0, 8))
+
+        ctk.CTkButton(
+            outlook_btn_row,
+            text="发送测试事件",
+            fg_color="#2b2b3b",
+            hover_color="#3a3a4a",
+            height=28,
+            font=ctk.CTkFont(size=12),
+            command=self._send_outlook_test_event,
+        ).grid(row=0, column=1)
+
         # ── Save button ───────────────────────────────────────────────────────
         ctk.CTkButton(
             self,
@@ -625,7 +702,7 @@ class SettingsDialog(ctk.CTkToplevel):
             height=40,
             font=ctk.CTkFont(size=14, weight="bold"),
             command=self._save,
-        ).grid(row=7, column=0, padx=24, pady=(16, 24), sticky="ew")
+        ).grid(row=9, column=0, padx=24, pady=(16, 24), sticky="ew")
 
     def _section(self, title: str, row: int):
         ctk.CTkLabel(
@@ -643,6 +720,16 @@ class SettingsDialog(ctk.CTkToplevel):
         tb = ctk.CTkTextbox(win, font=ctk.CTkFont(size=12), wrap="word")
         tb.pack(fill="both", expand=True, padx=16, pady=16)
         tb.insert("1.0", self._gcal_instructions)
+        tb.configure(state="disabled")
+
+    def _show_outlook_instructions(self):
+        win = ctk.CTkToplevel(self)
+        win.title("Outlook Calendar 配置说明")
+        win.geometry("520x460")
+        win.grab_set()
+        tb = ctk.CTkTextbox(win, font=ctk.CTkFont(size=12), wrap="word")
+        tb.pack(fill="both", expand=True, padx=16, pady=16)
+        tb.insert("1.0", self._outlook_instructions)
         tb.configure(state="disabled")
 
     def _connect_gcal(self):
@@ -691,6 +778,57 @@ class SettingsDialog(ctk.CTkToplevel):
 
         threading.Thread(target=do_test, daemon=True).start()
 
+    def _connect_outlook(self):
+        client_id = self._outlook_client_id_var.get().strip()
+        if client_id:
+            self.db.set_setting("outlook_client_id", client_id)
+
+        def do_auth():
+            try:
+                from calendar_sync import connect_outlook
+                connect_outlook(client_id)
+                self.after(0, lambda: messagebox.showinfo("成功", "Outlook 账户连接成功！"))
+            except Exception as e:
+                from calendar_sync import format_outlook_error
+                err = format_outlook_error(e)
+                self.after(0, lambda: messagebox.showerror("连接失败", err))
+
+        threading.Thread(target=do_auth, daemon=True).start()
+
+    def _send_outlook_test_event(self):
+        client_id = self._outlook_client_id_var.get().strip()
+        if client_id:
+            self.db.set_setting("outlook_client_id", client_id)
+
+        def do_test():
+            try:
+                from calendar_sync import sync_session_to_outlook
+                from datetime import datetime, timedelta
+                now = datetime.now()
+                session = {
+                    "start_time": (now - timedelta(minutes=25)).isoformat(),
+                    "end_time": now.isoformat(),
+                    "planned_duration": 25 * 60,
+                    "actual_duration": 25 * 60,
+                    "mode": "25min",
+                    "note": "测试事件 — 番茄时钟连通性测试",
+                    "tags": ["测试"],
+                    "completed": True,
+                }
+                event_id = sync_session_to_outlook(session, client_id)
+                self.after(0, lambda: messagebox.showinfo(
+                    "测试成功 ✅",
+                    f"已在 Outlook Calendar 创建测试事件！\n\n"
+                    f"时间：{now.strftime('%H:%M')} 往前 25 分钟\n"
+                    f"事件 ID：{event_id}"
+                ))
+            except Exception as e:
+                from calendar_sync import format_outlook_error
+                err = format_outlook_error(e)
+                self.after(0, lambda: messagebox.showerror("测试失败 ❌", err))
+
+        threading.Thread(target=do_test, daemon=True).start()
+
     def _save(self):
         # Custom duration
         try:
@@ -709,6 +847,10 @@ class SettingsDialog(ctk.CTkToplevel):
         # Google Calendar
         self.db.set_setting("gcal_enabled", str(self._gcal_var.get()).lower())
         self.db.set_setting("gcal_calendar_id", self._cal_id_var.get().strip() or "primary")
+
+        # Outlook Calendar
+        self.db.set_setting("outlook_enabled", str(self._outlook_var.get()).lower())
+        self.db.set_setting("outlook_client_id", self._outlook_client_id_var.get().strip())
 
         self.destroy()
         messagebox.showinfo("已保存", "设置已保存。")

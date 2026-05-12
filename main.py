@@ -92,12 +92,25 @@ class App:
                 target=self._sync_gcal, args=(session_data, cal_id), daemon=True
             ).start()
 
+        if self.db.get_setting("outlook_enabled", "false") == "true":
+            client_id = self.db.get_setting("outlook_client_id", "")
+            threading.Thread(
+                target=self._sync_outlook, args=(session_data, client_id), daemon=True
+            ).start()
+
     def _sync_gcal(self, session_data: dict, calendar_id: str):
         try:
             from calendar_sync import format_gcal_error, sync_session_to_gcal
             sync_session_to_gcal(session_data, calendar_id)
         except Exception as e:
             print(f"[Google Calendar] 同步失败: {format_gcal_error(e)}", file=sys.stderr)
+
+    def _sync_outlook(self, session_data: dict, client_id: str):
+        try:
+            from calendar_sync import format_outlook_error, sync_session_to_outlook
+            sync_session_to_outlook(session_data, client_id)
+        except Exception as e:
+            print(f"[Outlook Calendar] 同步失败: {format_outlook_error(e)}", file=sys.stderr)
 
     # ── Public API (called from tray / UI) ───────────────────────────────────
 
